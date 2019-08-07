@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/bennetschubert/pdfdiff.svg?branch=master)](https://travis-ci.org/bennetschubert/pdfdiff)
+
 # PDFDiff
 
 Visually compare pdf pages
