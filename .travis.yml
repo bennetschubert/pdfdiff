@@ -1,9 +1,9 @@
 language: c
 compiler: gcc
-before_install:
-  - sudo apt-get install -y libmupdf-dev
 install:
-  - make
+  - sudo apt-get install -y libmupdf-dev
+script:
+  - cd src && make
 addons:
   apt:
     update: true
