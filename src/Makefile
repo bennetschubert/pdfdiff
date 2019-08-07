@@ -1,5 +1,5 @@
 pdfdiff: main.o
-	gcc -o pdfdiff -L/usr/lib main.o -lmupdf -lmupdfthird -lm
+	gcc -o pdfdiff main.o -lmupdf -lmupdfthird -lfreetype -ljbig2dec -lharfbuzz -lopenjp2 -ljpeg
 
 main.o: main.c
 	gcc -Wall -c main.c
