@@ -41,6 +41,6 @@ $/src: make
 ### Prerequesites
 - make
 - gcc
-- mupdf-libraries (package name might be mupdf-dev)
+- mupdf-libraries (package name might be mupdf-dev(apk) or libmupdf-dev(apt))
 
 Once you got all the necessary tools and libs just run `make` inside the src directory.

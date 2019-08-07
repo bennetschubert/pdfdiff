@@ -162,7 +162,7 @@ int main(int argc, char* argv[]){
 	}
 
 	//render page
-	fz_try(ctx) pix1 = fz_new_pixmap_from_page_number(ctx, doc1, input_page_1, &fz_identity, fz_device_rgb(ctx), 0);
+	fz_try(ctx) pix1 = fz_new_pixmap_from_page_number(ctx, doc1, input_page_1, fz_identity, fz_device_rgb(ctx), 0);
 	fz_catch(ctx) {
 		fz_drop_document(ctx, doc1);
 		fz_drop_document(ctx, doc2);
@@ -170,7 +170,7 @@ int main(int argc, char* argv[]){
 		return EXIT_FAILURE;
 	}
 
-	fz_try(ctx) pix2 = fz_new_pixmap_from_page_number(ctx, doc2, input_page_2, &fz_identity, fz_device_rgb(ctx), 0);
+	fz_try(ctx) pix2 = fz_new_pixmap_from_page_number(ctx, doc2, input_page_2, fz_identity, fz_device_rgb(ctx), 0);
 	fz_catch(ctx) {
 		fz_drop_document(ctx, doc1);
 		fz_drop_document(ctx, doc2);
