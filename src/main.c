@@ -3,7 +3,7 @@
 #include <string.h>
 #include "mupdf/fitz.h"
 
-enum OUTPUT_TYPE {OUT_PPM, OUT_PNG};
+enum OUTPUT_TYPE {OUT_PAM, OUT_PNG};
 
 char* get_file_extension(char* filename){
 	char* dot = strrchr(filename, '.');
@@ -24,52 +24,7 @@ int print_pdf_info(fz_context* ctx, fz_document* doc){
 	return EXIT_SUCCESS;
 }
 
-int pixmap_to_ppm(char* filename, fz_pixmap* pix){
-	FILE* fd;
-	fd = fopen(filename, "w");
-	if(!fd){
-		fclose(fd);
-		return EXIT_FAILURE;
-	}
-
-	int err = 0;
-	err |= fprintf(fd, "P3\n");
-	err |= fprintf(fd, "%d %d\n", pix->w, pix->h);
-	err |= fprintf(fd, "255\n");
-	for (int y = 0; y < pix->h ; ++y)
-	{
-		unsigned char *p = &pix->samples[y * pix->stride];
-		for (int x = 0; x < pix->w; ++x)
-		{
-			if (x > 0) err |= 	fprintf(fd, "  ");
-			err |=  fprintf(fd, "%3d %3d %3d", p[0], p[1], p[2]);
-			p += pix->n;
-		}
-		err |= fprintf(fd, "\n");
-	}
-
-	fclose(fd);
-
-	if(err < 0) return EXIT_FAILURE;
-	return EXIT_SUCCESS;
-}
-
-int pixmap_to_png(char * filename, fz_context* ctx, fz_pixmap* pix){
-	fz_try(ctx) fz_save_pixmap_as_png(ctx, pix ,filename);
-	fz_catch(ctx){
-		return EXIT_FAILURE;
-	}
-	return EXIT_SUCCESS;
-}
-
-/*
- *1. create empty pixmap
- *2. draw black pixel for each difference in the images
- *3. return the pixmap
- */
-fz_pixmap* pixmap_compare(fz_pixmap* dest, fz_pixmap* src, fz_context* ctx){
-	//fprintf(stderr, "Functin pixmap_compare not implemented yet\n");
-	
+fz_pixmap* pixmap_compare(fz_context* ctx, fz_pixmap* dest, fz_pixmap* src){
 	int src_width, src_height, dest_width, dest_height;
 	fz_pixmap* pix;
 
@@ -95,9 +50,6 @@ fz_pixmap* pixmap_compare(fz_pixmap* dest, fz_pixmap* src, fz_context* ctx){
 	fz_catch(ctx) return NULL;
 
 	//finally do the comparison
-	//int total_pixels = src_width * src_height;
-	//int equal_pixels = 0;
-
 	for (int y = 0; y < src_height; ++y)
 	{
 		for (int x = 0; x < src_width; ++x)
@@ -106,13 +58,12 @@ fz_pixmap* pixmap_compare(fz_pixmap* dest, fz_pixmap* src, fz_context* ctx){
 			unsigned char *a = &src->samples[offset * src->n];
 			unsigned char *b = &dest->samples[offset * dest->n];
 			unsigned char *out = &pix->samples[offset * pix->n];
-			if(memcmp(a, b, 3) == 0){} //equal_pixels++;
-			else {
+			if(memcmp(a, b, 3) != 0){
 				out[0] = 0xFF; //r
 				out[1] = 0x00; //g
 				out[2] = 0x00; //b
 				out[3] = 0x99; //a
-			}
+			} //equal_pixels++;
 		}
 	}
 
@@ -134,12 +85,14 @@ int main(int argc, char* argv[]){
 
 	int input_page_1, input_page_2;
 
-	char* extension;
-	int output_type;
+	int output_type = -1;
 
 	fz_context *ctx;
 	fz_document *doc1, *doc2;
 	fz_pixmap *pix1, *pix2, *cmp_pix;
+
+	fz_output *output = NULL;
+	void (*output_fn)(fz_context *ctx, fz_output* output, fz_pixmap* pix); //function to used for pixmap output
 
 	if(!sscanf(page_arg_1, "%d", &input_page_1)){
 		fprintf(stderr, "invalid argument page, exepected (int), got: %s", page_arg_1);
@@ -151,23 +104,41 @@ int main(int argc, char* argv[]){
 		return EXIT_FAILURE;
 	}
 
-	extension = get_file_extension(output_file);
-	//checkout output file format
-	if (strcmp(extension, "png") == 0 )
-		output_type = OUT_PNG;
-	else if (strcmp(extension, "ppm") == 0 )
-		output_type = OUT_PPM;
-	else {
-		fprintf(stderr, "could not infer type of output file: %s\n", output_file);
-		return EXIT_FAILURE;
-	}
-
 	//create fitz context
 	ctx = fz_new_context(NULL, NULL, FZ_STORE_UNLIMITED);
 	if(!ctx){
 		fprintf(stderr, "cannot create mupdf context");
 		fz_drop_context(ctx);
 		return EXIT_FAILURE;
+	}
+
+	//check output file format
+	if(strcmp(output_file,"-png") == 0) {
+		output_type = OUT_PNG;
+		output = fz_stdout(ctx);
+	}
+	else if(strcmp(output_file,"-pam") == 0) {
+		output_type = OUT_PAM;
+		output = fz_stdout(ctx);
+	}
+	else {
+		char* extension = get_file_extension(output_file);
+		if (strcmp(extension,"png") == 0) output_type = OUT_PNG;
+		if (strcmp(extension,"pam") == 0) output_type = OUT_PAM;
+		output = fz_new_output_with_path(ctx, output_file, 0);
+	}
+
+	switch(output_type){
+		case OUT_PNG:
+			output_fn = &fz_write_pixmap_as_png;
+			break;
+		case OUT_PAM:
+			output_fn = &fz_write_pixmap_as_pam;
+			break;
+		default: 
+			fz_drop_context(ctx);
+			fprintf(stderr, "could not infer type of output file: %s\n", output_file);
+			return EXIT_FAILURE;
 	}
 
 	fz_try(ctx) fz_register_document_handlers(ctx);
@@ -207,21 +178,13 @@ int main(int argc, char* argv[]){
 		return EXIT_FAILURE;
 	}
 
-	cmp_pix = pixmap_compare(pix1, pix2, ctx);
+	//compare the images
+	cmp_pix = pixmap_compare(ctx, pix1, pix2);
 	if(!cmp_pix) fprintf(stderr, "could not compare images\n");
 
-	int write_error = -1;
-	switch(output_type){
-	case OUT_PNG:
-		write_error = pixmap_to_png(output_file, ctx, cmp_pix);
-		break;
-	case OUT_PPM:
-		write_error = pixmap_to_ppm(output_file, cmp_pix);
-		break;
-	default: ;
-	}
-
-	if(write_error){
+	//output the result 
+	fz_try(ctx) (*output_fn)(ctx, output, cmp_pix);
+	fz_catch(ctx){
 		fz_drop_pixmap(ctx, pix1);
 		fz_drop_pixmap(ctx, pix2);
 		fz_drop_document(ctx, doc1);
@@ -231,6 +194,7 @@ int main(int argc, char* argv[]){
 		return EXIT_FAILURE;
 	}
 	
+	//clean stuff up
 	fz_drop_pixmap(ctx, pix1);
 	fz_drop_pixmap(ctx, pix2);
 	fz_drop_pixmap(ctx, cmp_pix);

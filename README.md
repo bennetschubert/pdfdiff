@@ -9,7 +9,11 @@ Visually compare pdf pages
 - **$pdf1Page**: pageindex in pdf1
 - **$pdf2**: path to pdf file
 - **$pdf2Page**: pageindex in pdf2
-- **$outputfile**: \*.png or \*.ppm file
+- **$outputfile**:
+	- filename with extension \*.png
+	- filename with extension \*.pam
+	- -png to stream to stdout in \*.png format
+	- -pam to stream to stdout in \*.pam format
 
 **Attention** pageindex is starting at 0
 
