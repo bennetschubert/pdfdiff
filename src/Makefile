@@ -1,8 +1,8 @@
 pdfdiff: main.o
-	gcc -o pdfdiff main.o -L/usr/lib -lmupdf -lmupdfthird -lm 
+	gcc -o pdfdiff -L/usr/lib main.o -lmupdf -lmupdfthird -lm
 
 main.o: main.c
-	gcc -g -Wall -c main.c
+	gcc -Wall -c main.c
 
 clean:
 	rm *.o
