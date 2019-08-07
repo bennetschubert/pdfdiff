@@ -1,8 +1,11 @@
 language: c
 compiler: gcc
-install:
-  - sudo apt-get install -y libmupdf-dev
+services: docker
+before_install:
+  - docker build -t bennetschubert/pdfdiff .
+install: skip
 script:
+  - docker run --rm --mount type=bind,source="$(pwd)"/src/,target=/src/ -w /src -it bennetschubert/pdfdiff /bin/sh -c "make"
   - cd src && make
 addons:
   apt:
