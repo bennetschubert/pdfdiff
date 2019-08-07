@@ -6,7 +6,6 @@ before_install:
 install: skip
 script:
   - docker run --rm --mount type=bind,source="$(pwd)"/src/,target=/src/ -w /src -it bennetschubert/pdfdiff /bin/sh -c "make"
-  - cd src && make
 addons:
   apt:
     update: true
