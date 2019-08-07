@@ -30,7 +30,7 @@ The result is stored in PNG-Format in the file diff.png.
 ```
 # On host machine first build the docker image, then run a container
 $~: ./build.sh
-$~:	./run.sh
+$~: ./run.sh
 
 # now inside docker container
 $/src: make
