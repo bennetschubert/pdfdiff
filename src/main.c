@@ -124,65 +124,36 @@ int main(int argc, char* argv[]){
 			return EXIT_FAILURE;
 	}
 
-	fz_try(ctx) fz_register_document_handlers(ctx);
-	fz_catch(ctx) {
-		fz_drop_context(ctx);
-		return EXIT_FAILURE;
+	fz_try(ctx) {
+		fz_register_document_handlers(ctx);
+
+		//open documents
+		doc1 = fz_open_document(ctx, input_file_1);
+		doc2 = fz_open_document(ctx, input_file_2);
+
+		//render pages
+		pix1 = fz_new_pixmap_from_page_number(ctx, doc1, input_page_1, fz_identity, fz_device_rgb(ctx), 0);
+		pix2 = fz_new_pixmap_from_page_number(ctx, doc2, input_page_2, fz_identity, fz_device_rgb(ctx), 0);
+
+		//compare the images
+		cmp_pix = pixmap_compare(ctx, pix1, pix2);
+		if(!cmp_pix) fz_throw(ctx, FZ_ERROR_GENERIC, "could not compare images\n");
+
+		//output the result
+		(*output_fn)(ctx, output, cmp_pix);
 	}
-
-	//open document
-	fz_try(ctx) doc1 = fz_open_document(ctx, input_file_1);
-	fz_catch(ctx) {
-		fz_drop_context(ctx);
-		return EXIT_FAILURE;
-	}
-
-	fz_try(ctx) doc2 = fz_open_document(ctx, input_file_2);
-	fz_catch(ctx) {
-		fz_drop_document(ctx, doc1);
-		fz_drop_context(ctx);
-		return EXIT_FAILURE;
-	}
-
-	//render page
-	fz_try(ctx) pix1 = fz_new_pixmap_from_page_number(ctx, doc1, input_page_1, fz_identity, fz_device_rgb(ctx), 0);
-	fz_catch(ctx) {
-		fz_drop_document(ctx, doc1);
-		fz_drop_document(ctx, doc2);
-		fz_drop_context(ctx);
-		return EXIT_FAILURE;
-	}
-
-	fz_try(ctx) pix2 = fz_new_pixmap_from_page_number(ctx, doc2, input_page_2, fz_identity, fz_device_rgb(ctx), 0);
-	fz_catch(ctx) {
-		fz_drop_document(ctx, doc1);
-		fz_drop_document(ctx, doc2);
-		fz_drop_context(ctx);
-		return EXIT_FAILURE;
-	}
-
-	//compare the images
-	cmp_pix = pixmap_compare(ctx, pix1, pix2);
-	if(!cmp_pix) fprintf(stderr, "could not compare images\n");
-
-	//output the result 
-	fz_try(ctx) (*output_fn)(ctx, output, cmp_pix);
-	fz_catch(ctx){
+	fz_always(ctx){
+		//clean stuff up
 		fz_drop_pixmap(ctx, pix1);
 		fz_drop_pixmap(ctx, pix2);
+		fz_drop_pixmap(ctx, cmp_pix);
 		fz_drop_document(ctx, doc1);
 		fz_drop_document(ctx, doc2);
 		fz_drop_context(ctx);
-		fprintf(stderr, "error while writing, output may be corrupted\n");
+	}
+	fz_catch(ctx){
 		return EXIT_FAILURE;
 	}
-	
-	//clean stuff up
-	fz_drop_pixmap(ctx, pix1);
-	fz_drop_pixmap(ctx, pix2);
-	fz_drop_pixmap(ctx, cmp_pix);
-	fz_drop_document(ctx, doc1);
-	fz_drop_document(ctx, doc2);
-	fz_drop_context(ctx);
+
 	return EXIT_SUCCESS;
 }
