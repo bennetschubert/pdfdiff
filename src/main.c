@@ -11,19 +11,6 @@ char* get_file_extension(char* filename){
 	return dot + 1;
 }
 
-int print_pdf_info(fz_context* ctx, fz_document* doc){
-	int page_count; 
-
-	//count number of pages
-	fz_try(ctx) page_count = fz_count_pages(ctx, doc);
-	fz_catch(ctx) {
-		return EXIT_FAILURE;
-	}
-
-	printf("Pages: %d\n", page_count);
-	return EXIT_SUCCESS;
-}
-
 fz_pixmap* pixmap_compare(fz_context* ctx, fz_pixmap* dest, fz_pixmap* src){
 	int src_width, src_height, dest_width, dest_height;
 	fz_pixmap* pix;
