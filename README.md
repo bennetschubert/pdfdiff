@@ -31,8 +31,10 @@ The result is stored in PNG-Format in the file diff.png.
 ### Inside Docker
 ```
 # On host machine first build the docker image, then run a container
-$~: ./build.sh
-$~: ./run.sh
+$~: git clone https://github.com/bennetschubert/pdfdiff.git
+$~: cd pdfdiff 
+$~/pdfdiff/: ./build.sh
+$~/pdfdiff/: ./run.sh
 
 # now inside docker container
 $/src: make
