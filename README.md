@@ -45,6 +45,17 @@ $/src: make
 ### Prerequesites
 - make
 - gcc
-- mupdf-libraries (package name might be mupdf-dev(apk) or libmupdf-dev(apt))
+- libc
+- musl
+- mupdf-libraries
+- FreeType
+- JBig2Dec
+- HarfBuzz
+- OpenJpeg
+- Jpeg
+
+To install those depencies using apk run
+
+`apk add gcc make libc-dev musl-dev mupdf-dev freetype-dev jbig2dec-dev harfbuzz-dev openjpeg-dev jpeg-dev`
 
 Once you got all the necessary tools and libs just run `make` inside the src directory.
