@@ -11,21 +11,9 @@ char* get_file_extension(char* filename){
 	return dot + 1;
 }
 
-int print_pdf_info(fz_context* ctx, fz_document* doc){
-	int page_count; 
-
-	//count number of pages
-	fz_try(ctx) page_count = fz_count_pages(ctx, doc);
-	fz_catch(ctx) {
-		return EXIT_FAILURE;
-	}
-
-	printf("Pages: %d\n", page_count);
-	return EXIT_SUCCESS;
-}
-
 fz_pixmap* pixmap_compare(fz_context* ctx, fz_pixmap* dest, fz_pixmap* src){
 	int src_width, src_height, dest_width, dest_height;
+	fz_colorspace* colorspace;
 	fz_pixmap* pix;
 
 	fz_try(ctx) {
@@ -33,41 +21,36 @@ fz_pixmap* pixmap_compare(fz_context* ctx, fz_pixmap* dest, fz_pixmap* src){
 		src_height = fz_pixmap_height(ctx, src);
 		dest_width = fz_pixmap_width(ctx, dest);
 		dest_height = fz_pixmap_height(ctx, dest);
+		if(!(src_width == dest_width && src_height == dest_height))
+			fz_throw(
+				ctx,
+				FZ_ERROR_GENERIC,
+				"error: input widths and height must be equal"
+			);
+
+		//copy the colorspace from src
+		colorspace = fz_pixmap_colorspace(ctx, src);
+		//create a new empty pixmap for the result
+		pix = fz_new_pixmap(ctx, colorspace, src_width, src_height, NULL, 1);
 	}
-	fz_catch(ctx) return NULL;
-
-	if(!(src_width == dest_width && src_height == dest_height)){
-		fprintf(stderr, "input mismatch got: %dx%dpx and %dx%dpx\n",
-				src_width, src_height, dest_width, dest_height);
-		return NULL;
-	}
-
-	fz_colorspace* colorspace;
-	fz_try(ctx) colorspace = fz_pixmap_colorspace(ctx, src);
-	fz_catch(ctx) return NULL;
-
-	fz_try(ctx) pix = fz_new_pixmap(ctx, colorspace, src_width, src_height, NULL, 1);
 	fz_catch(ctx) return NULL;
 
 	//finally do the comparison
-	for (int y = 0; y < src_height; ++y)
+	unsigned char *a, *b, *out;
+	for (int i = 0; i < src_height * src_width; ++i)
 	{
-		for (int x = 0; x < src_width; ++x)
-		{
-			int offset = (y * src_width) + x;
-			unsigned char *a = &src->samples[offset * src->n];
-			unsigned char *b = &dest->samples[offset * dest->n];
-			unsigned char *out = &pix->samples[offset * pix->n];
-			if(memcmp(a, b, 3) != 0){
-				out[0] = 0xFF; //r
-				out[1] = 0x00; //g
-				out[2] = 0x00; //b
-				out[3] = 0x99; //a
-			} //equal_pixels++;
+		a = &src->samples[i * src->n];
+		b = &dest->samples[i * dest->n];
+		out = &pix->samples[i * pix->n];
+
+		if(memcmp(a, b, 3) != 0){
+			out[0] = 0xFF; //r
+			out[1] = 0x00; //g
+			out[2] = 0x00; //b
+			out[3] = 0x99; //a
 		}
 	}
 
-	//fprintf(stderr, "%d of %d pixels are equal(%.2f%%)\n", equal_pixels, total_pixels, (float)equal_pixels / (float)total_pixels * 100.0f);
 	return pix;
 }
 
@@ -92,7 +75,7 @@ int main(int argc, char* argv[]){
 	fz_pixmap *pix1, *pix2, *cmp_pix;
 
 	fz_output *output = NULL;
-	void (*output_fn)(fz_context *ctx, fz_output* output, fz_pixmap* pix); //function to used for pixmap output
+	void (*output_fn)(fz_context *ctx, fz_output* output, fz_pixmap* pix);//function to used for pixmap output
 
 	if(!sscanf(page_arg_1, "%d", &input_page_1)){
 		fprintf(stderr, "invalid argument page, exepected (int), got: %s", page_arg_1);
@@ -130,10 +113,10 @@ int main(int argc, char* argv[]){
 
 	switch(output_type){
 		case OUT_PNG:
-			output_fn = &fz_write_pixmap_as_png;
+			output_fn = (void (*)(fz_context*, fz_output*, fz_pixmap*)) &fz_write_pixmap_as_png;
 			break;
 		case OUT_PAM:
-			output_fn = &fz_write_pixmap_as_pam;
+			output_fn = (void (*)(fz_context*, fz_output*, fz_pixmap*)) &fz_write_pixmap_as_pam;
 			break;
 		default: 
 			fz_drop_context(ctx);
